@@ -154,9 +154,26 @@ export default function App() {
 
   const claimCharacter = (charId) => {
     const newPlayers = { ...gameData.players };
-    if (gameData.players[charId] !== user.uid) newPlayers[charId] = user.uid; 
+
+    if (newPlayers[charId] === user.uid) {
+      // 1. กดซ้ำที่บทบาทเดิม -> ยกเลิกการเลือก (Deselect)
+      delete newPlayers[charId];
+    } else {
+      // 2. ป้องกันผู้เล่น 1 คนเลือกหลายบทบาท (ถ้า 1 คนเล่นได้แค่ 1 ตัวละคร)
+      // เคลียร์บทบาทเก่าที่เคยเลือกไว้ก่อน
+      Object.keys(newPlayers).forEach(key => {
+        if (newPlayers[key] === user.uid) {
+          delete newPlayers[key];
+        }
+      });
+      
+      // กำหนดบทบาทใหม่ที่เพิ่งกดเลือก
+      newPlayers[charId] = user.uid;
+    }
+    
     syncState({ players: newPlayers });
   };
+
 
   const startGamePlay = async () => {
     setIsLoading(true);
