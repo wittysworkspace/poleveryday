@@ -32,9 +32,9 @@ const ZONES = ['Residential', 'CBD', 'City Hall', 'University', 'Industrial'];
 const MAP_LAYOUT = [
   { name: 'Residential', col: 'col-span-1', row: 'row-span-1', gradient: 'from-green-900/40 to-emerald-900/20', border: 'border-green-500/30', text: 'text-green-400' },
   { name: 'CBD', col: 'col-span-1', row: 'row-span-1', gradient: 'from-blue-900/40 to-cyan-900/20', border: 'border-blue-500/30', text: 'text-blue-400' },
-  { name: 'City Hall', col: 'col-span-1', row: 'row-span-1', gradient: 'from-amber-900/40 to-orange-900/20', border: 'border-amber-500/30', text: 'text-amber-400', isHub: true },
+  { name: 'City Hall', col: 'col-span-1 sm:col-span-2 lg:col-span-1', row: 'row-span-1', gradient: 'from-amber-900/40 to-orange-900/20', border: 'border-amber-500/30', text: 'text-amber-400', isHub: true },
   { name: 'University', col: 'col-span-1', row: 'row-span-1', gradient: 'from-purple-900/40 to-fuchsia-900/20', border: 'border-purple-500/30', text: 'text-purple-400' },
-  { name: 'Industrial', col: 'col-span-1 sm:col-span-3', row: 'row-span-1', gradient: 'from-slate-800/40 to-gray-800/20', border: 'border-slate-500/30', text: 'text-slate-400' }
+  { name: 'Industrial', col: 'col-span-2', row: 'row-span-1', gradient: 'from-slate-800/40 to-gray-800/20', border: 'border-slate-500/30', text: 'text-slate-400' }
 ];
 
 const CRISIS_TYPES = [
@@ -116,17 +116,17 @@ export default function App() {
     const interval = setInterval(() => {
       const remaining = Math.max(0, Math.ceil((gameData.turnEndTime - Date.now()) / 1000));
       setTimeLeft(remaining);
-
-      if (remaining === 0 && isMyTurn() && !isEndingTurn.current) {
-        isEndingTurn.current = true;
-        handleEndTurn();
-      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [appStatus, gameData?.turnEndTime, gameData?.turnIndex]);
+  }, [appStatus, gameData?.turnEndTime]);
 
-  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    if (appStatus === 'PLAYING' && timeLeft === 0 && isMyTurn() && !isEndingTurn.current) {
+      isEndingTurn.current = true;
+      handleEndTurn();
+    }
+  }, [timeLeft, appStatus]);  
 
   useEffect(() => {
     const handleResize = () => {
@@ -382,7 +382,7 @@ export default function App() {
           </div>
           {authError && <div className="text-xs text-red-400 bg-red-900/20 p-3 rounded-xl border border-red-500/30">⚠️ Auth Error: {authError}</div>}
         </div>
-        <div className="fixed bottom-4 left-4 text-[10px] sm:text-xs text-slate-500/60 font-mono z-50 pointer-events-none">v1.0.3</div>
+       <div className="fixed bottom-4 left-4 text-[10px] sm:text-xs text-slate-500/60 font-mono z-50 pointer-events-none">beta version 1.0.4</div>
       </div>
     );
   }
@@ -426,233 +426,252 @@ export default function App() {
     );
   }
 
-    if (!gameData) return null;
+      if (!gameData) return null;
 
   return (
-    // 1. นำกล่อง Scale ออก กลับมาใช้ Full Screen ปกติ
-    <div className="fixed inset-0 overflow-hidden bg-slate-950 text-slate-200 font-sans flex flex-col">
+    <div className="fixed inset-0 flex flex-col bg-slate-950 text-slate-200 font-sans overflow-hidden">
       {isLoading && renderLoading()}
       
-      {/* Header */}
-      <header className="bg-slate-900/50 backdrop-blur-lg border-b border-white/5 h-14 sm:h-16 px-4 flex items-center justify-between z-50 shrink-0">
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <ShieldAlert className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
-          <h1 className="text-sm sm:text-lg font-black tracking-wider text-white">POL EVERYDAY <span className="hidden sm:inline text-xs text-blue-400 font-mono ml-2">#{lobbyCode}</span></h1>
+            {/* Header - Fixed at top */}
+      <header className="bg-slate-900/80 backdrop-blur-lg border-b border-white/5 h-16 px-4 flex items-center justify-between z-50 shrink-0">
+        <div className="flex items-center gap-3 shrink-0">
+          <ShieldAlert className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+          <h1 className="text-sm sm:text-lg font-black tracking-wider text-white">POL EVERYDAY <span className="hidden sm:inline text-xs text-blue-400 font-mono ml-2 px-2 py-1 bg-blue-900/30 rounded-lg">#{lobbyCode}</span></h1>
         </div>
         
-        <div className="flex-1 max-w-[120px] sm:max-w-xs px-2 sm:px-4">
-          <div className="flex justify-between text-[8px] sm:text-[10px] mb-1 font-bold uppercase tracking-wider">
-            <span className="text-red-400">CITY PANIC</span>
-            <span>{gameData.panic}%</span>
+        <div className="flex-1 max-w-[150px] sm:max-w-md px-4">
+          <div className="flex justify-between text-[10px] mb-1 font-bold uppercase tracking-wider">
+            <span className="text-red-400 flex items-center gap-1"><AlertTriangle className="w-3 h-3"/> CITY PANIC</span>
+            <span className="text-white">{gameData.panic}%</span>
           </div>
-          <div className="h-1.5 sm:h-2 bg-slate-950 rounded-full border border-white/5">
+          <div className="h-2 sm:h-3 bg-slate-950 rounded-full border border-white/10 overflow-hidden shadow-inner">
             <div className={`h-full transition-all duration-700 ${getProgressColor(gameData.panic, 100, true)}`} style={{ width: `${gameData.panic}%` }} />
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold bg-slate-950/80 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl border border-white/10 shrink-0">
-          <span className="hidden sm:inline text-slate-400 uppercase">Policies</span>
-          <div className="flex gap-1">
-            {[1, 2, 3].map(i => <div key={i} className={`w-2 h-2 rounded-full ${i <= Object.values(gameData.policies).filter(Boolean).length ? 'bg-emerald-400' : 'bg-slate-800'}`} />)}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold bg-slate-950/80 px-3 py-1.5 rounded-xl border border-white/10 shadow-lg">
+            <span className="hidden sm:inline text-slate-400 uppercase tracking-widest">Policies</span>
+            <div className="flex gap-1.5">
+              {[1, 2, 3].map(i => <div key={i} className={`w-2.5 h-2.5 rounded-full ${i <= Object.values(gameData.policies).filter(Boolean).length ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-slate-800'}`} />)}
+            </div>
+          </div>
+
+          {/* ปุ่ม Info สำหรับอ่านกติกา */}
+          <div className="relative group flex items-center">
+            <button className="p-1.5 sm:p-2 rounded-xl bg-slate-900/80 border border-white/10 hover:bg-slate-800 transition-colors">
+              <Info className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 group-hover:text-blue-400 transition-colors" />
+            </button>
+            
+            {/* กล่อง Pop-up กติกา */}
+            <div className="absolute top-full right-0 mt-3 w-[260px] sm:w-[320px] bg-slate-900/95 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[100] pointer-events-none">
+              <h3 className="text-blue-400 font-black text-xs sm:text-sm uppercase mb-2 border-b border-white/10 pb-2">📖 กติกาการเล่น</h3>
+              <ul className="list-disc pl-4 space-y-1.5 text-slate-300 text-[10px] sm:text-xs leading-relaxed font-normal">
+                <li>สลับกันเล่น ภายในเวลา <span className="text-white font-bold">30 วินาที/เทิร์น</span></li>
+                <li>ใช้ <span className="text-blue-400 font-bold">AP (แต้มแอคชั่น)</span> ทำกิจกรรม เดิน พักผ่อน ซ่อม</li>
+                <li><span className="text-red-400 font-bold">Crisis (วิกฤต)</span> จะสุ่มเกิด หากสะสมที่เดิมเกิน 3 อัน ค่า Panic จะ +20%</li>
+                <li><span className="text-red-500 font-bold">แพ้เมื่อ:</span> Panic ครบ 100% หรือเพื่อนคนใดคนหนึ่ง MH หมดหลอด</li>
+                <li><span className="text-emerald-400 font-bold">ชนะเมื่อ:</span> ไปที่ City Hall และซื้อนโยบายให้ครบ 3 อัน</li>
+              </ul>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      {/* 2. ✅ แก้ให้จอเล็กไถขึ้นลงได้ (overflow-y-auto) ส่วนจอใหญ่ล็อกไว้ (lg:overflow-hidden) */}
-      <main className="flex-1 flex flex-col lg:flex-row p-2 sm:p-3 gap-2 sm:gap-3 overflow-y-auto lg:overflow-hidden">
-        
-        {/* Left Side: Map & Logs */}
-        {/* 3. ✅ ป้องกันไม่ให้ฝั่งซ้ายโดนบีบตอนอยู่บนจอเล็ก (shrink-0) */}
-        <div className="flex-[1.5] flex flex-col gap-2 sm:gap-3 shrink-0 lg:min-h-0 lg:shrink">
+      {/* Main Content Area - Scrollable with Max Width */}
+      <main className="flex-1 overflow-y-auto custom-scrollbar flex justify-center p-3 sm:p-4 lg:p-6">
+        {/* Container limit max width to keep it beautiful on ultrawide */}
+        <div className="w-full max-w-[1440px] flex flex-col lg:flex-row gap-4 lg:gap-6 h-max lg:h-full">
           
-          {/* Map Grid */}
-          {/* 4. ✅ บังคับความสูงขั้นต่ำ (min-h-[300px]) แผนที่จะได้ไม่แบน */}
-          <div className="bg-slate-900/40 border border-white/5 rounded-2xl sm:rounded-[2rem] p-2 sm:p-3 flex-1 min-h-[300px] lg:min-h-0 overflow-hidden relative">
-            {/* 5. ✅ ปรับจำนวนแถว Grid ให้สมส่วน */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 grid-rows-3 sm:grid-rows-2 gap-2 h-full">
-              {MAP_LAYOUT.map(zone => (
-                <div 
-                  key={zone.name} 
-                  onClick={() => handleZoneClick(zone.name)} 
-                  className={`${zone.col} ${zone.row} flex flex-col relative bg-gradient-to-br ${zone.gradient} border ${zone.border} rounded-2xl sm:rounded-3xl p-2 transition-all 
-                  ${moveMode && myTurn && gameData.characters[gameData.turnIndex].location !== zone.name ? 'cursor-pointer hover:scale-105 border-blue-400 ring-2 ring-blue-400/20' : ''} 
-                  ${gameData.characters[gameData.turnIndex].location === zone.name ? 'ring-2 ring-white/10' : ''}`}
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <h3 className={`font-black uppercase text-[8px] sm:text-[10px] ${zone.text} truncate`}>{zone.name}</h3>
-                    {zone.isHub && <Landmark className="w-3 h-3 sm:w-4 sm:h-4 text-purple-400"/>}
-                  </div>
-                  
-                  {/* Crisis List */}
-                  <div className="flex flex-col gap-1 overflow-y-auto mb-auto scrollbar-hide">
-                    {gameData.zones[zone.name].map((c, i) => (
-                      <div key={i} className="flex items-center gap-1 bg-slate-950/80 px-1.5 py-0.5 rounded-lg border border-red-500/30 w-fit">
-                        <span className="text-[7px] sm:text-[9px] font-bold text-slate-300 truncate">{c.type}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Character Icons in Zone */}
-                  <div className="flex flex-wrap gap-1 mt-1 pt-1 border-t border-white/5">
-                    {gameData.characters.filter(c => c.location === zone.name).map(c => {
-                      const CIco = ICONS[c.iconName];
-                      const isActive = gameData.turnIndex === c.id;
-                      return (
-                        <div key={c.id} className={`${c.bg} p-1 sm:p-1.5 rounded-lg sm:rounded-xl border relative ${isActive ? 'border-white' : 'border-white/10'}`}>
-                          <CIco className={`w-3 h-3 sm:w-4 sm:h-4 ${c.color}`} />
-                          {isActive && <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-400 rounded-full animate-ping"/>}
+          {/* Left Side: Map & Logs */}
+          <div className="flex-[1.8] xl:flex-[2.2] flex flex-col gap-4 lg:gap-6 min-h-0">
+            
+            {/* Map Grid Container */}
+            <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-3 sm:p-5 shrink-0 shadow-2xl">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 auto-rows-[130px] sm:auto-rows-[160px] xl:auto-rows-[180px]">
+                {MAP_LAYOUT.map(zone => (
+                  <div 
+                    key={zone.name} 
+                    onClick={() => handleZoneClick(zone.name)} 
+                    className={`${zone.col} ${zone.row} flex flex-col relative bg-gradient-to-br ${zone.gradient} border ${zone.border} rounded-2xl p-3 transition-all duration-300 overflow-hidden
+                    ${moveMode && myTurn && gameData.characters[gameData.turnIndex].location !== zone.name ? 'cursor-pointer hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(0,0,0,0.4)] border-blue-400 ring-2 ring-blue-400/30' : ''} 
+                    ${gameData.characters[gameData.turnIndex].location === zone.name ? 'ring-2 ring-white/20 shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]' : ''}`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className={`font-black uppercase text-[10px] sm:text-xs tracking-widest ${zone.text} truncate`}>{zone.name}</h3>
+                      {zone.isHub && <Landmark className="w-4 h-4 text-amber-400 drop-shadow-md"/>}
+                    </div>
+                    
+                    {/* Crisis List */}
+                    <div className="flex flex-col gap-1 overflow-y-auto mb-auto pr-1 custom-scrollbar">
+                      {gameData.zones[zone.name].map((c, i) => (
+                        <div key={i} className="flex items-center gap-1.5 bg-slate-950/80 px-2 py-1 rounded-lg border border-red-500/30 w-fit backdrop-blur-sm">
+                          <AlertTriangle className="w-2.5 h-2.5 text-red-400" />
+                          <span className="text-[9px] sm:text-[10px] font-bold text-slate-200 tracking-wide">{c.type}</span>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+                      ))}
+                    </div>
 
-          {/* Network Logs */}
-          <div className="bg-slate-950 border border-white/5 rounded-2xl h-24 sm:h-32 shrink-0 flex flex-col overflow-hidden">
-            <div className="bg-slate-900/80 p-2 border-b border-white/5 font-bold text-[8px] sm:text-[10px] text-slate-400 px-4 uppercase flex items-center gap-2">
-              <Activity className="w-3 h-3 text-emerald-400"/> Network Logs
-            </div>
-            <div className="p-2 sm:p-3 overflow-y-auto flex-1 space-y-1 text-[9px] sm:text-[11px] font-mono scrollbar-hide">
-              {gameData.logs.map(log => (
-                <div key={log.id} className={`flex gap-2 ${log.type === 'crisis' ? 'text-red-400' : log.type === 'critical' ? 'text-yellow-400 font-bold' : log.type === 'good' ? 'text-emerald-400' : log.type === 'system' ? 'text-cyan-400' : 'text-slate-400'}`}>
-                  <span className="opacity-50">{'>'}</span>{log.msg}
-                </div>
-              ))}
-              <div ref={logsEndRef}/>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Side: Players & Controls */}
-        {/* 6. ✅ ป้องกันไม่ให้ฝั่งขวาโดนบีบตอนจอเล็กเช่นกัน */}
-        <div className="lg:w-[350px] xl:w-[400px] flex flex-col gap-2 sm:gap-3 shrink-0 lg:min-h-0 lg:shrink">
-          
-          {/* Player Cards Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
-            {gameData.characters.map((c, i) => {
-              const active = gameData.turnIndex === i;
-              const CIco = ICONS[c.iconName];
-              const owner = gameData.players[c.id];
-              const isMine = owner === user.uid;
-              return (
-                <div key={c.id} className={`relative p-2 sm:p-3 rounded-2xl sm:rounded-3xl border transition-all ${active ? 'bg-slate-800 border-blue-500 shadow-lg' : 'bg-slate-900/50 border-white/5 opacity-70'}`}>
-                  <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
-                    <div className={`p-1 sm:p-1.5 rounded-lg sm:rounded-xl ${c.bg}`}><CIco className="w-3 h-3 sm:w-4 sm:h-4 text-white"/></div>
-                    <div className="min-w-0">
-                      <div className="font-bold text-[10px] sm:text-xs truncate">{c.role} {isMine && ' (YOU)'}</div>
-                      <div className="text-[8px] sm:text-[9px] text-blue-300 truncate uppercase tracking-tighter">{c.location}</div>
+                    {/* Character Icons in Zone */}
+                    <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-white/10">
+                      {gameData.characters.filter(c => c.location === zone.name).map(c => {
+                        const CIco = ICONS[c.iconName];
+                        const isActive = gameData.turnIndex === c.id;
+                        return (
+                          <div key={c.id} className={`${c.bg} p-1.5 rounded-xl border relative shadow-md ${isActive ? 'border-white scale-110' : 'border-white/10 opacity-80'}`}>
+                            <CIco className={`w-4 h-4 ${c.color}`} />
+                            {isActive && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-400 rounded-full animate-ping"/>}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-1 text-[8px] sm:text-[9px] font-mono">
-                    <div className="flex items-center gap-1 justify-center"><Heart className="w-2 h-2 text-pink-500"/>{c.mh}</div>
-                    <div className="flex items-center gap-1 justify-center border-x border-white/10"><Clock className="w-2 h-2 text-blue-500"/>{c.time}</div>
-                    <div className="flex items-center gap-1 justify-center"><DollarSign className="w-2 h-2 text-emerald-500"/>{c.money}</div>
-                  </div>
-                  {!owner && (
-                    <button onClick={() => claimCharacter(c.id)} className="w-full mt-2 py-1 bg-emerald-600/30 hover:bg-emerald-600 rounded-lg text-[8px] font-black uppercase transition-colors">Take Control</button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Action Control Panel */}
-          {/* 7. ✅ ใส่ min-h ให้ Control Panel เผื่อไว้ */}
-          <div className="bg-slate-900/60 border border-white/5 rounded-2xl sm:rounded-[2rem] flex flex-col flex-1 min-h-[350px] lg:min-h-0 overflow-hidden relative shadow-2xl">
-            {/* Status & Timer Header */}
-            <div className="p-3 sm:p-4 border-b border-white/5 flex justify-between items-center bg-blue-950/20">
-              <div className="min-w-0">
-                <span className="text-[8px] sm:text-[10px] text-blue-400 font-bold block uppercase tracking-widest">Active Turn</span>
-                <div className="text-sm sm:text-xl font-black truncate">{gameData.characters[gameData.turnIndex].role}</div>
-              </div>
-              
-              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                <div className={`flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 ${timeLeft <= 10 ? 'border-red-500 text-red-500 animate-pulse bg-red-900/20' : 'border-blue-500/50 text-blue-400 bg-blue-950/50'}`}>
-                  <span className="text-sm sm:text-lg font-black leading-none">{timeLeft}</span>
-                  <span className="text-[6px] sm:text-[8px] uppercase tracking-widest font-bold">Sec</span>
-                </div>
-                <div className="bg-slate-950/80 px-2 sm:px-4 py-1 rounded-xl sm:rounded-2xl border border-white/5 text-center">
-                  <span className="text-[8px] sm:text-[10px] font-bold opacity-50 block uppercase">AP</span>
-                  <span className="text-sm sm:text-xl font-black text-blue-400">{gameData.characters[gameData.turnIndex].time}</span>
-                </div>
+                ))}
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="p-3 sm:p-4 flex flex-col gap-3 sm:gap-4 flex-1 overflow-y-auto">
-              {/* Wait indicator (Non-blur) */}
-              {!myTurn && (
-                <div className="bg-blue-600/10 border border-blue-500/20 p-2 rounded-xl text-center flex items-center justify-center gap-2">
-                  <Loader className="w-3 h-3 text-blue-400 animate-spin"/>
-                  <span className="text-[10px] font-bold text-blue-300 uppercase tracking-widest">Waiting for player...</span>
-                </div>
-              )}
+            {/* Network Logs */}
+            <div className="bg-slate-900/60 border border-white/5 rounded-3xl flex flex-col overflow-hidden shadow-2xl flex-1 min-h-[200px] lg:min-h-0">
+              <div className="bg-slate-950/80 p-3 border-b border-white/5 font-bold text-[10px] text-slate-400 px-5 uppercase tracking-widest flex items-center gap-2 shrink-0">
+                <Activity className="w-4 h-4 text-emerald-400"/> Network Logs
+              </div>
+              <div className="p-4 overflow-y-auto flex-1 space-y-2 text-[11px] sm:text-xs font-mono custom-scrollbar">
+                {gameData.logs.map(log => (
+                  <div key={log.id} className={`flex gap-3 leading-relaxed ${log.type === 'crisis' ? 'text-red-400 bg-red-950/20 p-1.5 rounded' : log.type === 'critical' ? 'text-yellow-400 font-bold' : log.type === 'good' ? 'text-emerald-400' : log.type === 'system' ? 'text-cyan-400' : 'text-slate-300'}`}>
+                    <span className="opacity-40 shrink-0">{'>'}</span><span className="break-words">{log.msg}</span>
+                  </div>
+                ))}
+                <div ref={logsEndRef}/>
+              </div>
+            </div>
+          </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <button 
-                  onClick={() => setMoveMode(!moveMode)} 
-                  disabled={!myTurn || (gameData.characters[gameData.turnIndex].time < 1 && !(gameData.characters[gameData.turnIndex].role === 'Student' && gameData.studentFreeMove))} 
-                  className={`p-2 sm:p-3 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-bold flex flex-col items-center gap-1 transition-all ${moveMode ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-800 border border-white/5 hover:bg-slate-700 disabled:opacity-40'}`}
-                >
-                  <Map className="w-4 h-4"/>MOVE
-                </button>
-                <button 
-                  onClick={handleWork} 
-                  disabled={!myTurn || gameData.characters[gameData.turnIndex].time < 1} 
-                  className="p-2 sm:p-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 border border-white/5 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-bold flex flex-col items-center gap-1 transition-all"
-                >
-                  <Hammer className="w-4 h-4 text-emerald-400"/>WORK
-                </button>
-                <button 
-                  onClick={handleRest} 
-                  disabled={!myTurn || gameData.characters[gameData.turnIndex].time < 1} 
-                  className="p-2 sm:p-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 border border-white/5 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-bold flex flex-col items-center gap-1 transition-all"
-                >
-                  <Coffee className="w-4 h-4 text-pink-400"/>REST
-                </button>
-                <button 
-                  onClick={handleFix} 
-                  disabled={!myTurn || gameData.characters[gameData.turnIndex].time < 1 || gameData.zones[gameData.characters[gameData.turnIndex].location].length === 0} 
-                  className="p-2 sm:p-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 border border-white/5 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-bold flex flex-col items-center gap-1 transition-all"
-                >
-                  <Wrench className="w-4 h-4 text-orange-400"/>FIX
-                </button>
+          {/* Right Side: Players & Controls */}
+          <div className="lg:w-[380px] xl:w-[420px] flex flex-col gap-4 lg:gap-6 shrink-0 h-max lg:h-full">
+            
+            {/* Player Cards Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
+              {gameData.characters.map((c, i) => {
+                const active = gameData.turnIndex === i;
+                const CIco = ICONS[c.iconName];
+                const owner = gameData.players[c.id];
+                const isMine = owner === user.uid;
+                return (
+                  <div key={c.id} className={`relative p-3 sm:p-4 rounded-2xl border transition-all duration-300 ${active ? 'bg-slate-800 border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.15)] scale-[1.02]' : 'bg-slate-900/40 border-white/5 opacity-80 hover:opacity-100'}`}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`p-2 rounded-xl shadow-inner ${c.bg}`}><CIco className="w-5 h-5 text-white"/></div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-xs sm:text-sm truncate text-white">{c.role} {isMine && <span className="text-blue-400 text-[10px] ml-1 uppercase">(You)</span>}</div>
+                        <div className="text-[9px] sm:text-[10px] text-blue-300/70 truncate uppercase tracking-widest">{c.location}</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1 text-[10px] sm:text-xs font-mono font-bold bg-slate-950/50 p-2 rounded-xl">
+                      <div className="flex items-center gap-1.5 justify-center"><Heart className="w-3 h-3 text-pink-500"/>{c.mh}</div>
+                      <div className="flex items-center gap-1.5 justify-center border-x border-white/10"><Clock className="w-3 h-3 text-blue-500"/>{c.time}</div>
+                      <div className="flex items-center gap-1.5 justify-center"><DollarSign className="w-3 h-3 text-emerald-500"/>{c.money}</div>
+                    </div>
+                    {!owner && (
+                      <button onClick={() => claimCharacter(c.id)} className="w-full mt-3 py-2 bg-emerald-600/20 border border-emerald-500/30 hover:bg-emerald-600 hover:text-white text-emerald-400 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">Take Control</button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Action Control Panel */}
+            <div className="bg-slate-900/60 border border-white/5 rounded-[2rem] flex flex-col flex-1 shadow-2xl min-h-[450px] overflow-hidden">
+              {/* Status & Timer Header */}
+              <div className="p-4 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-blue-950/30 to-slate-900/30 shrink-0">
+                <div className="min-w-0">
+                  <span className="text-[9px] text-blue-400 font-bold block uppercase tracking-widest mb-1">Active Turn</span>
+                  <div className="text-xl sm:text-2xl font-black truncate text-white">{gameData.characters[gameData.turnIndex].role}</div>
+                </div>
+                
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className={`flex flex-col items-center justify-center w-12 h-12 rounded-full border-2 transition-colors duration-300 ${timeLeft <= 10 ? 'border-red-500 text-red-400 animate-pulse bg-red-950/40 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'border-blue-500/50 text-blue-400 bg-blue-950/50'}`}>
+                    <span className="text-lg font-black leading-none">{timeLeft}</span>
+                    <span className="text-[7px] uppercase tracking-widest font-bold mt-0.5">Sec</span>
+                  </div>
+                  <div className="bg-slate-950/80 px-4 py-2 rounded-2xl border border-white/5 text-center shadow-inner">
+                    <span className="text-[9px] font-bold opacity-50 block uppercase tracking-wider mb-0.5">AP</span>
+                    <span className="text-xl font-black text-blue-400">{gameData.characters[gameData.turnIndex].time}</span>
+                  </div>
+                </div>
               </div>
 
-              {/* Policies Area */}
-              <div className="mt-1 pt-2 border-t border-white/10 flex-1">
-                <span className="text-[8px] sm:text-[10px] font-black text-purple-400 uppercase tracking-widest mb-2 block">Available Policies</span>
-                {gameData.characters[gameData.turnIndex].location !== 'City Hall' ? (
-                  <div className="text-center p-3 sm:p-4 border border-dashed border-white/10 rounded-xl sm:rounded-2xl text-slate-500 text-[10px] uppercase font-bold">Go to City Hall to pass policies</div>
-                ) : (
-                  <div className="space-y-1.5 sm:space-y-2">
-                    {POLICIES.map(p => (
-                      <button 
-                        key={p.id} 
-                        onClick={() => handlePassPolicy(p)} 
-                        disabled={!myTurn || gameData.policies[p.id] || gameData.characters[gameData.turnIndex].time < p.costTime || gameData.characters[gameData.turnIndex].money < p.costMoney} 
-                        className={`w-full flex justify-between items-center p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border transition-all ${gameData.policies[p.id] ? 'bg-emerald-900/20 border-emerald-500/50 text-emerald-400' : 'bg-purple-900/30 border-purple-500/50 hover:bg-purple-900/50 disabled:opacity-40'}`}
-                      >
-                        <span className="text-[10px] sm:text-xs font-bold">{p.name}</span>
-                        {gameData.policies[p.id] ? <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4"/> : <div className="text-[8px] sm:text-[10px] font-black"><span className="text-emerald-400">${p.costMoney}</span> <span className="text-blue-400">{p.costTime}AP</span></div>}
-                      </button>
-                    ))}
+              {/* Action Buttons */}
+              <div className="p-4 flex flex-col gap-4 flex-1 overflow-y-auto custom-scrollbar">
+                {!myTurn && (
+                  <div className="bg-blue-900/20 border border-blue-500/30 p-3 rounded-2xl text-center flex items-center justify-center gap-2 shadow-inner">
+                    <Loader className="w-4 h-4 text-blue-400 animate-spin"/>
+                    <span className="text-xs font-bold text-blue-300 uppercase tracking-widest">Waiting for player...</span>
                   </div>
                 )}
-              </div>
 
-              {/* End Turn Button */}
-              <button 
-                onClick={handleEndTurn} 
-                disabled={!myTurn} 
-                className="mt-auto w-full py-3 sm:py-4 bg-gradient-to-r from-slate-800 to-slate-700 disabled:opacity-40 text-white text-[11px] sm:text-sm font-black rounded-xl sm:rounded-2xl border border-white/10 transition-all uppercase flex justify-center items-center gap-2 group shadow-lg"
-              >
-                END TURN <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform"/>
-              </button>
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => setMoveMode(!moveMode)} 
+                    disabled={!myTurn || (gameData.characters[gameData.turnIndex].time < 1 && !(gameData.characters[gameData.turnIndex].role === 'Student' && gameData.studentFreeMove))} 
+                    className={`p-3 rounded-2xl text-[11px] font-black uppercase tracking-widest flex flex-col items-center gap-2 transition-all duration-300 ${moveMode ? 'bg-blue-600 text-white shadow-[0_0_20px_rgba(59,130,246,0.4)] scale-105' : 'bg-slate-800 border border-white/5 hover:bg-slate-700 disabled:opacity-40 disabled:hover:bg-slate-800'}`}
+                  >
+                    <Map className="w-5 h-5"/>Move
+                  </button>
+                  <button 
+                    onClick={handleWork} 
+                    disabled={!myTurn || gameData.characters[gameData.turnIndex].time < 1} 
+                    className="p-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:hover:bg-slate-800 border border-white/5 rounded-2xl text-[11px] font-black uppercase tracking-widest flex flex-col items-center gap-2 transition-all duration-300 hover:text-emerald-400"
+                  >
+                    <Hammer className="w-5 h-5 text-emerald-500"/>Work
+                  </button>
+                  <button 
+                    onClick={handleRest} 
+                    disabled={!myTurn || gameData.characters[gameData.turnIndex].time < 1} 
+                    className="p-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:hover:bg-slate-800 border border-white/5 rounded-2xl text-[11px] font-black uppercase tracking-widest flex flex-col items-center gap-2 transition-all duration-300 hover:text-pink-400"
+                  >
+                    <Coffee className="w-5 h-5 text-pink-500"/>Rest
+                  </button>
+                  <button 
+                    onClick={handleFix} 
+                    disabled={!myTurn || gameData.characters[gameData.turnIndex].time < 1 || gameData.zones[gameData.characters[gameData.turnIndex].location].length === 0} 
+                    className="p-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:hover:bg-slate-800 border border-white/5 rounded-2xl text-[11px] font-black uppercase tracking-widest flex flex-col items-center gap-2 transition-all duration-300 hover:text-orange-400"
+                  >
+                    <Wrench className="w-5 h-5 text-orange-500"/>Fix
+                  </button>
+                </div>
+
+                {/* Policies Area */}
+                <div className="mt-2 pt-4 border-t border-white/10 flex-1">
+                  <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-3 block">Available Policies</span>
+                  {gameData.characters[gameData.turnIndex].location !== 'City Hall' ? (
+                    <div className="flex items-center justify-center h-24 border-2 border-dashed border-white/10 rounded-2xl bg-slate-900/30">
+                      <span className="text-slate-500 text-[10px] uppercase font-bold tracking-widest px-4 text-center leading-relaxed">Go to City Hall<br/>to pass policies</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {POLICIES.map(p => (
+                        <button 
+                          key={p.id} 
+                          onClick={() => handlePassPolicy(p)} 
+                          disabled={!myTurn || gameData.policies[p.id] || gameData.characters[gameData.turnIndex].time < p.costTime || gameData.characters[gameData.turnIndex].money < p.costMoney} 
+                          className={`w-full flex justify-between items-center p-3 sm:p-4 rounded-2xl border transition-all duration-300 ${gameData.policies[p.id] ? 'bg-emerald-900/20 border-emerald-500/50 text-emerald-400' : 'bg-purple-900/30 border-purple-500/30 hover:border-purple-500/60 hover:bg-purple-900/50 disabled:opacity-40 disabled:hover:bg-purple-900/30'}`}
+                        >
+                          <span className="text-xs font-bold tracking-wide">{p.name}</span>
+                          {gameData.policies[p.id] ? <CheckCircle className="w-4 h-4"/> : <div className="text-[10px] font-black bg-slate-950/80 px-2 py-1 rounded-lg"><span className="text-emerald-400">${p.costMoney}</span> <span className="text-blue-400 ml-1">{p.costTime}AP</span></div>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* End Turn Button */}
+                <button 
+                  onClick={handleEndTurn} 
+                  disabled={!myTurn} 
+                  className="mt-6 w-full py-4 bg-gradient-to-r from-slate-800 to-slate-700 disabled:opacity-40 disabled:hover:scale-100 hover:scale-[1.02] text-white text-xs sm:text-sm font-black rounded-2xl border border-white/10 transition-all duration-300 uppercase tracking-widest flex justify-center items-center gap-2 group shadow-xl"
+                >
+                  END TURN <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform"/>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -664,13 +683,17 @@ export default function App() {
           <div className="bg-slate-900 border border-white/10 rounded-[2.5rem] sm:rounded-[3rem] max-w-md w-full p-8 sm:p-10 text-center shadow-2xl relative overflow-hidden">
             <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full blur-[100px] opacity-30 ${gameData.gameState === 'WON' ? 'bg-emerald-500' : 'bg-red-500'}`} />
             <div className="relative z-10">
-              {gameData.gameState === 'WON' ? <><CheckCircle className="w-16 h-16 sm:w-20 sm:h-20 text-emerald-400 mx-auto mb-6"/><h2 className="text-2xl sm:text-4xl font-black text-white mb-2 uppercase tracking-tighter">City Secured</h2></> : <><AlertTriangle className="w-16 h-16 sm:w-20 sm:h-20 text-red-500 mx-auto mb-6"/><h2 className="text-2xl sm:text-4xl font-black text-white mb-2 uppercase tracking-tighter">System Collapse</h2></>}
-              <p className="text-slate-400 mb-8 text-xs sm:text-sm">{gameData.gameState === 'WON' ? "Your policies restored the city's balance." : "The city fell into chaos or your team burned out."}</p>
-              <button onClick={() => setAppStatus('MENU')} className="w-full py-4 sm:py-5 rounded-2xl font-black text-white bg-blue-600 hover:bg-blue-500 shadow-xl transition-all uppercase tracking-widest text-sm sm:text-base">Main Menu</button>
+              {gameData.gameState === 'WON' ? <><CheckCircle className="w-20 h-20 text-emerald-400 mx-auto mb-6 drop-shadow-[0_0_15px_rgba(52,211,153,0.5)]"/><h2 className="text-3xl sm:text-4xl font-black text-white mb-3 uppercase tracking-tighter">City Secured</h2></> : <><AlertTriangle className="w-20 h-20 text-red-500 mx-auto mb-6 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]"/><h2 className="text-3xl sm:text-4xl font-black text-white mb-3 uppercase tracking-tighter">System Collapse</h2></>}
+              <p className="text-slate-400 mb-8 text-sm leading-relaxed">{gameData.gameState === 'WON' ? "Your policies restored the city's balance." : "The city fell into chaos or your team burned out."}</p>
+              <button onClick={() => setAppStatus('MENU')} className="w-full py-4 rounded-2xl font-black text-white bg-blue-600 hover:bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all uppercase tracking-widest text-sm">Main Menu</button>
             </div>
           </div>
         </div>
       )}
+            {/* เพิ่มไว้ด้านล่างสุด ก่อน </div> ปิดหน้าเกม */}
+      <div className="fixed bottom-2 left-4 text-[9px] text-slate-500/40 font-mono z-50 pointer-events-none">
+        beta version 1.0.4
+      </div>
     </div>
   );
 }
