@@ -11,4 +11,7 @@ export default defineConfig({
   css: {
     transformer: 'postcss', // เพิ่มบรรทัดนี้เพื่อลดปัญหา Error @theme
   },
+  build: {
+    chunkSizeWarningLimit: 1000, // ขยายลิมิตการเตือนเป็น 1000 kB
+  }
 })
