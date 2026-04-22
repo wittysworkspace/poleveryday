@@ -92,6 +92,13 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState(30);
   const isEndingTurn = useRef(false);
 
+  const [isCopied, setIsCopied] = useState(false);
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(lobbyCode);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
+
   const isMyTurn = () => {
     if (!gameData || !user) return false;
     const activeCharOwner = gameData.players[gameData.turnIndex];
@@ -438,7 +445,18 @@ export default function App() {
                 <div className="text-[10px] text-blue-400 uppercase font-bold tracking-widest">รหัสห้อง</div>
                 <div className="text-xl sm:text-2xl font-mono font-black text-white flex items-center gap-2 tracking-widest">
                   {lobbyCode}
-                  <button onClick={() => { navigator.clipboard.writeText(lobbyCode); alert("Copied!"); }} className="p-1 hover:bg-white/10 rounded"><Copy className="w-4 h-4 text-slate-400"/></button>
+                  <button 
+                    onClick={handleCopyCode} 
+                    className="p-1 hover:bg-white/10 rounded flex items-center gap-1.5 transition-all w-[70px] justify-center">
+                  {isCopied ? (
+                   <>
+                  <CheckCircle className="w-4 h-4 text-emerald-400" />
+                   <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest animate-in fade-in zoom-in duration-200">Copied</span>
+                  </>
+                  ) : (
+                  <Copy className="w-4 h-4 text-slate-400 hover:text-white transition-colors" />
+                 )}
+                  </button>
                 </div>
               </div>
             </div>
