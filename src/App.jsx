@@ -32,7 +32,7 @@ const ZONES = ['Residential', 'CBD', 'City Hall', 'University', 'Industrial'];
 const MAP_LAYOUT = [
   { name: 'Residential', col: 'col-span-1', row: 'row-span-1', gradient: 'from-green-900/40 to-emerald-900/20', border: 'border-green-500/30', text: 'text-green-400' },
   { name: 'CBD', col: 'col-span-1', row: 'row-span-1', gradient: 'from-blue-900/40 to-cyan-900/20', border: 'border-blue-500/30', text: 'text-blue-400' },
-  { name: 'City Hall', col: 'col-span-1 sm:col-span-2 lg:col-span-1', row: 'row-span-1', gradient: 'from-amber-900/40 to-orange-900/20', border: 'border-amber-500/30', text: 'text-amber-400', isHub: true },
+  { name: 'City Hall', col: 'col-span-1', row: 'row-span-1', gradient: 'from-amber-900/40 to-orange-900/20', border: 'border-amber-500/30', text: 'text-amber-400', isHub: true },
   { name: 'University', col: 'col-span-1', row: 'row-span-1', gradient: 'from-purple-900/40 to-fuchsia-900/20', border: 'border-purple-500/30', text: 'text-purple-400' },
   { name: 'Industrial', col: 'col-span-2', row: 'row-span-1', gradient: 'from-slate-800/40 to-gray-800/20', border: 'border-slate-500/30', text: 'text-slate-400' }
 ];
@@ -421,7 +421,6 @@ export default function App() {
               {errorMsg && <div className="text-red-400 text-sm font-bold animate-pulse">{errorMsg}</div>}
             </div>
 
-            {/* เพิ่มส่วนแสดงกติกาในหน้าแรก */}
             <InstructionsPanel />
 
             {authError && <div className="text-xs text-red-400 bg-red-900/20 p-3 rounded-xl border border-red-500/30">⚠️ Auth Error: {authError}</div>}
@@ -473,7 +472,6 @@ export default function App() {
               })}
             </div>
 
-            {/* เพิ่มส่วนแสดงกติกาในหน้า Lobby */}
             <div className="mb-6">
                <InstructionsPanel />
             </div>
@@ -744,7 +742,7 @@ export default function App() {
       {isLoading && renderLoading()}
       {renderContent()}
       <div className="fixed bottom-2 left-4 text-[9px] sm:text-xs text-slate-500/50 font-mono z-[100] pointer-events-none">
-        beta version 1.0.6
+        beta version 1.0.8
       </div>
     </>
   );
