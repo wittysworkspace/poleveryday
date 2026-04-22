@@ -75,6 +75,74 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState(30);
   const isEndingTurn = useRef(false);
 
+  const isMyTurn = () => {
+    if (!gameData || !user) return false;
+    const activeCharOwner = gameData.players[gameData.turnIndex];
+    return activeCharOwner === user.uid || !activeCharOwner;
+  };
+
+  const handleEndTurn = (force = false) => {
+    // ถ้าไม่ใช่ตาเรา และไม่ได้ถูกบังคับให้ข้ามเทิร์น ให้หยุดการทำงาน
+    if (!force && !isMyTurn()) return; 
+
+    const nextIndex = (gameData.turnIndex + 1) % 4;
+    const isNewRound = nextIndex === 0;
+    const newTurnCount = isNewRound ? gameData.turnCount + 1 : gameData.turnCount;
+    
+    let nextChar = { ...gameData.characters[nextIndex] };
+    let newChars = [...gameData.characters];
+    let newZones = { ...gameData.zones };
+    let newPanic = gameData.panic;
+    let newLogs = [...gameData.logs];
+    let newStudentFreeMove = gameData.studentFreeMove;
+
+    const addLog = (msg, type='normal') => newLogs.push({ id: Date.now() + Math.random(), msg, type });
+    nextChar.time = nextChar.maxTime; 
+    
+    if (nextChar.role === 'Student') newStudentFreeMove = true;
+    if (nextChar.role === 'Salaryman') {
+      nextChar.money = Math.min(nextChar.maxMoney, nextChar.money + 1);
+      addLog("Salaryman ได้รับรายได้เสริม +1 Money", 'good');
+    }
+
+    const crisisZones = ['Residential', 'CBD', 'University', 'Industrial']; 
+    const targetZone = crisisZones[Math.floor(Math.random() * crisisZones.length)];
+    const newCrisis = CRISIS_TYPES[Math.floor(Math.random() * CRISIS_TYPES.length)];
+    newZones[targetZone] = [...newZones[targetZone], newCrisis];
+    addLog(`ALERT: ${newCrisis.type} เกิดขึ้นที่โซน ${targetZone}!`, 'crisis');
+
+    if (newZones[targetZone].length > 3) {
+      newZones[targetZone] = [];
+      newPanic = Math.min(100, newPanic + 20);
+      addLog(`SYSTEM COLLAPSE ใน ${targetZone}! ค่า Panic +20%`, 'critical');
+    }
+
+    const activeCrises = newZones[nextChar.location];
+    if (activeCrises && activeCrises.length > 0) {
+      activeCrises.forEach(c => {
+        if (c.type === 'PM 2.5') nextChar.mh -= 1;
+        if (c.type === 'Traffic Jam') nextChar.time -= 1;
+        if (c.type === 'High Cost') nextChar.money -= 1;
+      });
+      nextChar.mh = Math.max(0, nextChar.mh);
+      nextChar.time = Math.max(0, nextChar.time);
+      nextChar.money = Math.max(0, nextChar.money);
+    }
+
+    newChars[nextIndex] = nextChar;
+    let finalState = 'PLAYING';
+    if (newPanic >= 100 || newChars.some(c => c.mh <= 0)) finalState = 'LOST';
+    else if (Object.values(gameData.policies).every(Boolean)) finalState = 'WON';
+
+    syncState({
+      turnIndex: nextIndex, turnCount: newTurnCount, characters: newChars, zones: newZones, panic: newPanic,
+      logs: newLogs, studentFreeMove: newStudentFreeMove, gameState: finalState,
+      turnEndTime: Date.now() + (30 * 1000)
+    });
+    setMoveMode(false);
+    setTimeout(() => { isEndingTurn.current = false; }, 1000);
+  };
+
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [gameData?.logs]);
@@ -122,26 +190,33 @@ export default function App() {
   }, [appStatus, gameData?.turnEndTime]);
 
   useEffect(() => {
-    if (appStatus === 'PLAYING' && timeLeft === 0 && isMyTurn() && !isEndingTurn.current) {
-      isEndingTurn.current = true;
-      handleEndTurn();
-    }
-  }, [timeLeft, appStatus]);  
+    if (appStatus === 'PLAYING' && timeLeft === 0 && !isEndingTurn.current && gameData) {
+      const activeCharOwner = gameData.players[gameData.turnIndex];
+      const isMe = activeCharOwner === user?.uid || !activeCharOwner;
 
-  useEffect(() => {
-    const handleResize = () => {
-      const BASE_WIDTH = 1366; 
-      const BASE_HEIGHT = 768;
-      const scaleX = window.innerWidth / BASE_WIDTH;
-      const scaleY = window.innerHeight / BASE_HEIGHT;
-      
-      setScale(Math.min(scaleX, scaleY));
-    };
-    
-    handleResize(); // สั่งคำนวณครั้งแรกตอนเปิดหน้าเว็บ
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+      // หาว่าใครคือผู้เล่นคิวถัดไป
+      const nextIndex = (gameData.turnIndex + 1) % 4;
+      const nextPlayerOwner = gameData.players[nextIndex];
+      const amINext = nextPlayerOwner === user?.uid;
+
+      if (isMe) {
+        // ตาเรา เราส่งออโต้ปกติ
+        isEndingTurn.current = true;
+        handleEndTurn();
+      } else if (amINext) {
+        // Fallback: ถ้าตาเพื่อนแล้วหมดเวลา ให้ "คิวถัดไป (เราเอง)" เป็นคนเตะข้ามให้
+        // หน่วงเวลา 2 วิ เผื่อเจ้าของเทิร์นกำลังส่งข้อมูลอยู่ จะได้ไม่แย่งกันยิง
+        const fallbackTimer = setTimeout(() => {
+          if (!isEndingTurn.current) {
+            isEndingTurn.current = true;
+            handleEndTurn(true); // สั่ง force=true
+          }
+        }, 2000);
+        
+        return () => clearTimeout(fallbackTimer);
+      }
+    }
+  }, [timeLeft, appStatus, gameData, user]);
 
   const createLobby = async () => {
     if (!user) return;
@@ -213,72 +288,6 @@ export default function App() {
       logs: [...gameData.logs, { id: Date.now(), msg: "=== ภารกิจเริ่มต้น! โปรดรักษาเมืองไว้ให้ได้ ===", type: "system" }] 
     });
     setIsLoading(false);
-  };
-
-  const isMyTurn = () => {
-    if (!gameData || !user) return false;
-    const activeCharOwner = gameData.players[gameData.turnIndex];
-    return activeCharOwner === user.uid || !activeCharOwner;
-  };
-
-  const handleEndTurn = () => {
-    if (!isMyTurn()) return;
-    const nextIndex = (gameData.turnIndex + 1) % 4;
-    const isNewRound = nextIndex === 0;
-    const newTurnCount = isNewRound ? gameData.turnCount + 1 : gameData.turnCount;
-    
-    let nextChar = { ...gameData.characters[nextIndex] };
-    let newChars = [...gameData.characters];
-    let newZones = { ...gameData.zones };
-    let newPanic = gameData.panic;
-    let newLogs = [...gameData.logs];
-    let newStudentFreeMove = gameData.studentFreeMove;
-
-    const addLog = (msg, type='normal') => newLogs.push({ id: Date.now() + Math.random(), msg, type });
-    nextChar.time = nextChar.maxTime; 
-    
-    if (nextChar.role === 'Student') newStudentFreeMove = true;
-    if (nextChar.role === 'Salaryman') {
-      nextChar.money = Math.min(nextChar.maxMoney, nextChar.money + 1);
-      addLog("Salaryman ได้รับรายได้เสริม +1 Money", 'good');
-    }
-
-    const crisisZones = ['Residential', 'CBD', 'University', 'Industrial']; 
-    const targetZone = crisisZones[Math.floor(Math.random() * crisisZones.length)];
-    const newCrisis = CRISIS_TYPES[Math.floor(Math.random() * CRISIS_TYPES.length)];
-    newZones[targetZone] = [...newZones[targetZone], newCrisis];
-    addLog(`ALERT: ${newCrisis.type} เกิดขึ้นที่โซน ${targetZone}!`, 'crisis');
-
-    if (newZones[targetZone].length > 3) {
-      newZones[targetZone] = [];
-      newPanic = Math.min(100, newPanic + 20);
-      addLog(`SYSTEM COLLAPSE ใน ${targetZone}! ค่า Panic +20%`, 'critical');
-    }
-
-    const activeCrises = newZones[nextChar.location];
-    if (activeCrises && activeCrises.length > 0) {
-      activeCrises.forEach(c => {
-        if (c.type === 'PM 2.5') nextChar.mh -= 1;
-        if (c.type === 'Traffic Jam') nextChar.time -= 1;
-        if (c.type === 'High Cost') nextChar.money -= 1;
-      });
-      nextChar.mh = Math.max(0, nextChar.mh);
-      nextChar.time = Math.max(0, nextChar.time);
-      nextChar.money = Math.max(0, nextChar.money);
-    }
-
-    newChars[nextIndex] = nextChar;
-    let finalState = 'PLAYING';
-    if (newPanic >= 100 || newChars.some(c => c.mh <= 0)) finalState = 'LOST';
-    else if (Object.values(gameData.policies).every(Boolean)) finalState = 'WON';
-
-    syncState({
-      turnIndex: nextIndex, turnCount: newTurnCount, characters: newChars, zones: newZones, panic: newPanic,
-      logs: newLogs, studentFreeMove: newStudentFreeMove, gameState: finalState,
-      turnEndTime: Date.now() + (30 * 1000)
-    });
-    setMoveMode(false);
-    setTimeout(() => { isEndingTurn.current = false; }, 1000);
   };
 
   const handleZoneClick = (zoneName) => {
@@ -426,13 +435,13 @@ export default function App() {
     );
   }
 
-      if (!gameData) return null;
+  if (!gameData) return null;
 
   return (
     <div className="fixed inset-0 flex flex-col bg-slate-950 text-slate-200 font-sans overflow-hidden">
       {isLoading && renderLoading()}
       
-            {/* Header - Fixed at top */}
+      {/* Header - Fixed at top */}
       <header className="bg-slate-900/80 backdrop-blur-lg border-b border-white/5 h-16 px-4 flex items-center justify-between z-50 shrink-0">
         <div className="flex items-center gap-3 shrink-0">
           <ShieldAlert className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
@@ -663,14 +672,22 @@ export default function App() {
                   )}
                 </div>
 
-                {/* End Turn Button */}
-                <button 
-                  onClick={handleEndTurn} 
-                  disabled={!myTurn} 
-                  className="mt-6 w-full py-4 bg-gradient-to-r from-slate-800 to-slate-700 disabled:opacity-40 disabled:hover:scale-100 hover:scale-[1.02] text-white text-xs sm:text-sm font-black rounded-2xl border border-white/10 transition-all duration-300 uppercase tracking-widest flex justify-center items-center gap-2 group shadow-xl"
-                >
-                  END TURN <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform"/>
-                </button>
+                {/* End Turn / Force Turn Button */}
+                {(() => {
+                  const canForceEnd = !myTurn && timeLeft === 0;
+                  return (
+                    <button 
+                      onClick={() => handleEndTurn(canForceEnd)} 
+                      disabled={!myTurn && !canForceEnd} 
+                      className={`mt-6 w-full py-4 disabled:opacity-40 disabled:hover:scale-100 hover:scale-[1.02] text-white text-xs sm:text-sm font-black rounded-2xl border transition-all duration-300 uppercase tracking-widest flex justify-center items-center gap-2 group shadow-xl
+                        ${canForceEnd 
+                          ? 'bg-gradient-to-r from-red-800 to-orange-700 animate-pulse border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.4)]' 
+                          : 'bg-gradient-to-r from-slate-800 to-slate-700 border-white/10'}`}
+                    >
+                      {canForceEnd ? 'FORCE NEXT TURN' : 'END TURN'} <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform"/>
+                    </button>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -690,9 +707,9 @@ export default function App() {
           </div>
         </div>
       )}
-            {/* เพิ่มไว้ด้านล่างสุด ก่อน </div> ปิดหน้าเกม */}
+      {/* เพิ่มไว้ด้านล่างสุด ก่อน </div> ปิดหน้าเกม */}
       <div className="fixed bottom-2 left-4 text-[9px] text-slate-500/40 font-mono z-50 pointer-events-none">
-        beta version 1.0.4
+        beta version 1.0.5
       </div>
     </div>
   );
