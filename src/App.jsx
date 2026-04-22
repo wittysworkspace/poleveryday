@@ -394,11 +394,23 @@ export default function App() {
             <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 p-6 rounded-[2.5rem] flex flex-col gap-4 shadow-2xl">
               <button onClick={createLobby} disabled={!user} className="w-full py-4 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"><Users className="w-5 h-5"/> สร้างห้องใหม่</button>
               <div className="flex items-center gap-4 text-slate-500"><hr className="flex-1 border-white/10" /><span>หรือ</span><hr className="flex-1 border-white/10" /></div>
-              <div className="flex gap-2">
-                {/* เปลี่ยน onChange ให้ยอมรับแค่ตัวเลข */}
-                <input type="text" maxLength={4} value={joinCode} onChange={(e) => setJoinCode(e.target.value.replace(/\D/g, ''))} placeholder="รหัสห้อง (ตัวเลข)" className="w-32 bg-slate-950 border border-white/10 rounded-2xl px-4 text-center font-mono text-white focus:border-blue-500" />
-                <button onClick={() => joinLobby(joinCode)} disabled={!user || joinCode.length !== 4} className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl border border-white/10 transition-all flex items-center justify-center gap-2 disabled:opacity-50"><LogIn className="w-5 h-5"/> เข้าร่วม</button>
-              </div>
+              <div className="flex gap-3">
+            <input 
+              type="text" 
+              maxLength={4} 
+              value={joinCode} 
+              onChange={(e) => setJoinCode(e.target.value.replace(/\D/g, ''))} 
+              placeholder="รหัส 4 หลัก" 
+              className="w-[45%] bg-slate-950 border border-white/10 rounded-2xl px-2 sm:px-4 text-center font-mono text-white focus:border-blue-500 text-sm outline-none transition-all focus:ring-2 focus:ring-blue-500/50" 
+            />
+            <button 
+              onClick={() => joinLobby(joinCode)} 
+              disabled={!user || joinCode.length !== 4} 
+              className="w-[55%] py-3 sm:py-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl border border-white/10 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <LogIn className="w-5 h-5"/> เข้าร่วม
+            </button>
+          </div>
               {errorMsg && <div className="text-red-400 text-sm font-bold animate-pulse">{errorMsg}</div>}
             </div>
 
