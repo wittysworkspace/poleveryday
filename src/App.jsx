@@ -38,10 +38,16 @@ const MAP_LAYOUT = [
 ];
 
 const CRISIS_TYPES = [
-  { type: 'PM 2.5', effect: 'Drain Mental Health', icon: Wind, color: 'text-gray-400' },
-  { type: 'Traffic Jam', effect: 'Drain Time', icon: Car, color: 'text-orange-400' },
-  { type: 'High Cost', effect: 'Drain Money', icon: TrendingUp, color: 'text-red-400' }
+  { type: 'PM 2.5', effect: 'Drain Mental Health', iconName: 'Wind', color: 'text-gray-400' },
+  { type: 'Traffic Jam', effect: 'Drain Time', iconName: 'Car', color: 'text-orange-400' },
+  { type: 'High Cost', effect: 'Drain Money', iconName: 'TrendingUp', color: 'text-red-400' }
 ];
+
+const CRISIS_ICONS = {
+  Wind,
+  Car,
+  TrendingUp
+};
 
 const POLICIES = [
   { id: 'cleanAir', name: 'Clean Air Act', costMoney: 8, costTime: 2 },
@@ -105,8 +111,11 @@ export default function App() {
     return activeCharOwner === user.uid || !activeCharOwner;
   };
 
-  const handleEndTurn = (force = false) => {
-    if (!force && !isMyTurn()) return; 
+  const handleEndTurn = async (force = false) => {
+  if (isEndingTurn.current) return;
+  if (!force && !isMyTurn()) return;
+
+  isEndingTurn.current = true;
 
     const nextIndex = (gameData.turnIndex + 1) % 4;
     const isNewRound = nextIndex === 0;
@@ -130,8 +139,18 @@ export default function App() {
 
     const crisisZones = ['Residential', 'CBD', 'University', 'Industrial']; 
     const targetZone = crisisZones[Math.floor(Math.random() * crisisZones.length)];
-    const newCrisis = CRISIS_TYPES[Math.floor(Math.random() * CRISIS_TYPES.length)];
+
+    const crisisTemplate = CRISIS_TYPES[Math.floor(Math.random() * CRISIS_TYPES.length)];
+
+    const newCrisis = {
+    type: crisisTemplate.type,
+     effect: crisisTemplate.effect,
+    iconName: crisisTemplate.iconName,
+    color: crisisTemplate.color
+    };
+
     newZones[targetZone] = [...newZones[targetZone], newCrisis];
+
     addLog(`ALERT: ${newCrisis.type} เกิดขึ้นที่โซน ${targetZone}!`, 'crisis');
 
     if (newZones[targetZone].length > 3) {
@@ -157,13 +176,23 @@ export default function App() {
     if (newPanic >= 100 || newChars.some(c => c.mh <= 0)) finalState = 'LOST';
     else if (Object.values(gameData.policies).every(Boolean)) finalState = 'WON';
 
-    syncState({
-      turnIndex: nextIndex, turnCount: newTurnCount, characters: newChars, zones: newZones, panic: newPanic,
-      logs: newLogs, studentFreeMove: newStudentFreeMove, gameState: finalState,
-      turnEndTime: Date.now() + (30 * 1000)
-    });
-    setMoveMode(false);
-    setTimeout(() => { isEndingTurn.current = false; }, 1000);
+    await syncState({
+  turnIndex: nextIndex,
+  turnCount: newTurnCount,
+  characters: newChars,
+  zones: newZones,
+  panic: newPanic,
+  logs: newLogs,
+  studentFreeMove: newStudentFreeMove,
+  gameState: finalState,
+  turnEndTime: Date.now() + (30 * 1000)
+  });
+
+  setMoveMode(false);
+
+setTimeout(() => {
+  isEndingTurn.current = false;
+}, 1000);
   };
 
   useEffect(() => {
@@ -279,10 +308,17 @@ export default function App() {
   };
 
   const syncState = async (updates) => {
-    if (!lobbyCode || !user || !gameData) return;
-    const lobbyRef = doc(db, 'artifacts', globalAppId, 'public', 'data', 'lobbies', lobbyCode);
+  if (!lobbyCode || !user || !gameData) return;
+
+  const lobbyRef = doc(db, 'artifacts', globalAppId, 'public', 'data', 'lobbies', lobbyCode);
+
+  try {
     await updateDoc(lobbyRef, updates);
-  };
+  } catch (err) {
+    console.error('SYNC STATE ERROR:', err);
+    setErrorMsg(err.message);
+  }
+};
 
   const claimCharacter = (charId) => {
     const newPlayers = { ...gameData.players };
@@ -742,7 +778,7 @@ export default function App() {
       {isLoading && renderLoading()}
       {renderContent()}
       <div className="fixed bottom-2 left-4 text-[9px] sm:text-xs text-slate-500/50 font-mono z-[100] pointer-events-none">
-        beta version 1.0.8
+        beta version 1.0.9
       </div>
     </>
   );
